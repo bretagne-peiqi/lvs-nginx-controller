@@ -11,9 +11,9 @@ import (
 
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
-	v2 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	 v2 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	 utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
@@ -71,6 +71,12 @@ func (lbc *LoadBalancerController) updateCm(newobj, oldobj interface{}) {
 		return
 	}
 	lbc.enqueueCm(newobj)
+}
+
+func (lbc *LoadBalancerController) DeletedCm(obj interface{}) {
+	cm := obj.(*v1.ConfigMap)
+	if cm.GetName()
+
 }
 
 func (lbc *LoadBalancerController) enqueueNginx(obj interface{}) {

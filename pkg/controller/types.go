@@ -1,53 +1,113 @@
 package controller
 
 import (
-	"encoding/json"
+	"net"
 	"sync"
-
-	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type PortToNginx struct {
-	metav1.TypeMeta `json:",inline"`
-	Metadata        v1.ObjectMeta `json:"metadata"`
+const (
+	L7 = []string{"80", "443"}
+)
 
-	Port			string	`json:"port"` //udp&tcp port
-	Proto			string  `json:"proto"`
-	Nginx		    string  `json:"nginxIpv4"`
-	ServiceName	    string	`json:"serviceName, omitempty"`
+type AddrStore struct {
+	//Lock   sync.RWMutex
+	Name   string
+	Addr   net.IP
+	Action string
 }
 
-type PortToNginxList  struct {
-	metav1.TypeMeta `json:",inline"`
-	Metadata        metav1.ListMeta `json:"metadata"`
+var Ports []string
 
-	Items	[]PortToNginx	 `json:"items"`
+type PortStore struct {
+	Lock sync.RWMutex
+	Name string
+	L4   map[string]Ports // {"tcp-services":{80, 443, 53 ...}; "udp-services": {53, 553 ...}}
 }
 
-type ProtoToPort struct {
-	core map[string]string
-	lock sync.RWMutex
+type LBStore struct {
+	lock			  sync.RWMutex
+	portStore         PortStore
+	addrStore         map[string]AddrStore
 }
 
-func newProtoToPort() *ProtoToPort {
-	var p ProtoToPort
-	p.core = make(map[string]string)
-	return &p
+var LBQueue <-chan LBStore
+
+func NewLBStore() *LBStore {
+	lb := &LBStore{}
+
+	lb.addrStore = make(map[string]AddrStore)
+
+	ports := make([]string)
+	lb.portStore.L4 := make(map[string]ports)
+
+	return &lb
 }
 
-func (p *ProtoToPort) Read(port string) (string, bool) {
-	p.lock.RLock()
-	defer p.lock.RUnlock()
-	proto, ok := p.core[port]
-	delete(p.core, port)
-	return proto, ok
+func (lb *LBStore) Init() error {}
+
+func (lb *LBStore) L4Set(port PortStore) error {
+	port.Lock.Lock()
+	defer port.Lock.Unlock()
+
+	lb.lock.Lock()
+	defer lb.Lock.Unlock()
+
+	switch port.Name {
+	case "del-tcp-services":
+		lb.portStore.L4["tcp-services"] = port.L4["tcp-services"]
+	case "del-udp-services":
+		lb.portStore.L4["udp-services"] = port.L4["udp-services"]
+	case "add-tcp-services":
+		lb.portStore.L4["tcp-services"] = port.L4["tcp-services"]
+	case "add-udp-services":
+		lb.portStore.L4["udp-services"] = port.L4["udp-services"]
+	}
+
+	lb.portStore.Name = port.Name
+
+	return nil
 }
 
-func (p *ProtoToPort) Write(proto string, port string) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
-	p.core[proto] = port
+func (lb *LBStore) L4Get(proto string) ([]string, string, bool) {
+	lb.lock.Lock()
+	defer lb.Lock.Unlock()
+
+	if !lb.portStore.L4[proto] {
+		return nil,"", false
+	}
+
+	ports := lb.portStore.L4[proto]
+	name := lb.portStore.Name
+
+	lb.portStore.L4[proto] = make([]string)
+	lb.portStore.Name = ""
+
+	return ports, name, true
 }
 
-// note {port: "action-proto"}
+func (lb *LBStore) AddrSet(addr AddrStore) error {
+	lb.lock.Lock()
+	defer lb.Lock.Unlock()
+
+	lb.addrStore[addr.Name] = addr
+
+	return nil
+}
+
+func (lb *LBStore) AddrGet() (map[net.IP]string, bool) {
+	lb.lock.Lock()
+	defer lb.Lock.Unlock()
+
+	addrs := make(map[net.IP]string)
+
+	if len(lb.addrStore) == nil {
+		return nil, false
+	}
+
+	for key, addr := range lb.addrStore {
+		addrs[addr.Addr] = addr.Action
+		delete(lb.addrStore, key)
+	}
+
+	return addrs, true
+}

@@ -3,8 +3,8 @@ package ipvs
 import (
 	"fmt"
 	"net"
-	"strings"
 	"strconv"
+	"strings"
 	"syscall"
 
 	//"github.com/lvs-controller/pkg/config"
@@ -206,7 +206,28 @@ func (lm *LvsManager) Update(daddr, dport, proto string) error {
 }
 
 //this is used to FWDMethod and Weight
-func (lm *LvsManager) UpdateDst(daddr, dport, proto string) error { return nil }
+func (lm *LvsManager) DelRServer(addr net.IP) error {
+	svcs, err := lm.handle.ListServices()
+	if err != nil {
+		return false, fmt.Errorf("Failed to list existed svc, err: %+v\n", err)
+	}
+
+	for _, s := range svcs {
+		dsts, err := lm.handle.ListDestinations(&s)
+		if err != nil {
+			return false, fmt.Errorf("Failed to list existed dsts for svc %v, err: %+v\n", svc, err)
+		}
+
+		for _, d := range dsts {
+			if d.Address.Equal(addr) {
+				if err := lm.handle.DelDestination(&s, &d); err != nil {
+					return false, fmt.Errorf("Failed to del dst %v in svc %v, err: %+v\n", dst, svc, err)
+				}
+			}
+		}
+	}
+	return nil
+}
 
 // functionallities
 func (lm *LvsManager) EnsureService(svc libipvs.Service) (bool, error) {
