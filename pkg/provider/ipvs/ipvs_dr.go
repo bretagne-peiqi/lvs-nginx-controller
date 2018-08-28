@@ -3,8 +3,8 @@ package ipvs
 import (
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
+	"strconv"
 	"syscall"
 
 	//"github.com/lvs-controller/pkg/config"
@@ -54,7 +54,7 @@ func (lm *LvsManager) Init() {
 func (lm *LvsManager) Sync(daddr, dport, proto string) error {
 	if ok := checkArgs(daddr, dport); !ok {
 		fmt.Printf("Failed, illegal addr&port args in add %v, %v\n", daddr, dport)
-		return nil
+		return nil 
 	}
 
 	//for test purpose
@@ -113,7 +113,7 @@ func (lm *LvsManager) Sync(daddr, dport, proto string) error {
 func (lm *LvsManager) Del(daddr, dport, proto string) error {
 	if ok := checkArgs(daddr, dport); !ok {
 		fmt.Printf("Failed, illegal addr&port args in del %v, %v\n", daddr, dport)
-		return nil
+		return nil 
 	}
 	//for test purpose
 	vport, _ := strconv.Atoi(dport)
@@ -166,7 +166,7 @@ func (lm *LvsManager) Del(daddr, dport, proto string) error {
 func (lm *LvsManager) Update(daddr, dport, proto string) error {
 	if ok := checkArgs(daddr, dport); !ok {
 		fmt.Printf("Failed, illegal addr&port args in update %v, %v\n", daddr, dport)
-		return nil
+		return nil 
 	}
 	//for test purpose
 	vport, _ := strconv.Atoi(dport)
@@ -206,22 +206,27 @@ func (lm *LvsManager) Update(daddr, dport, proto string) error {
 }
 
 //this is used to FWDMethod and Weight
-func (lm *LvsManager) DelRServer(addr net.IP) error {
+func (lm *LvsManager) UpdateDst(daddr, dport, proto string) error { return nil }
+
+
+//this is used to FWDMethod and Weight
+func (lm *LvsManager) DelRServer(addr string) error {
+
 	svcs, err := lm.handle.ListServices()
 	if err != nil {
-		return false, fmt.Errorf("Failed to list existed svc, err: %+v\n", err)
+		return  fmt.Errorf("Failed to list existed svc, err: %+v\n", err)
 	}
 
 	for _, s := range svcs {
-		dsts, err := lm.handle.ListDestinations(&s)
+		dsts, err := lm.handle.ListDestinations(s)
 		if err != nil {
-			return false, fmt.Errorf("Failed to list existed dsts for svc %v, err: %+v\n", svc, err)
+			return  fmt.Errorf("Failed to list existed dsts for svc %v, err: %+v\n", s, err)
 		}
 
 		for _, d := range dsts {
-			if d.Address.Equal(addr) {
-				if err := lm.handle.DelDestination(&s, &d); err != nil {
-					return false, fmt.Errorf("Failed to del dst %v in svc %v, err: %+v\n", dst, svc, err)
+			if d.Address.Equal(net.ParseIP(addr)) {
+				if err := lm.handle.DelDestination(s, d); err != nil {
+					return fmt.Errorf("Failed to del dst %v in svc %v, err: %+v\n", d, s, err)
 				}
 			}
 		}
@@ -326,3 +331,4 @@ func checkArgs(ipv4, port string) bool {
 
 	return true
 }
+

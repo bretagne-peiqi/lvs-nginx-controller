@@ -68,7 +68,6 @@ func (lbc *LoadBalancerController) PortAddFunc(obj interface{}) {
 		for key, _ := range cm.Data {
 			port.L4[tcpService] = append(port.L4[tcpService], key)
 		}
-
 		//reset udp services;
 		port.L4[udpService] = make([]string)
 		port.Name = "add-tcp-services"

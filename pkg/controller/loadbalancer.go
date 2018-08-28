@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	//"sync"
 	"time"
 
 	"github.com/lvs-controller/pkg/config"
@@ -11,14 +12,22 @@ import (
 
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
-	 v2 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v2 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	 utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+)
+
+const (
+	nginxServer  = "ingress-nginx"
+	nginxPattern = "nginx-ingress-controller"
+
+	deletion = "deleting"
+	add      = "adding"
 )
 
 type LoadBalancerController struct {
@@ -30,28 +39,24 @@ type LoadBalancerController struct {
 	queue      workqueue.RateLimitingInterface
 
 	//Nginx ingress controller layer 7
-	ngnixStore      cache.Store
 	nginxController cache.Controller
-	nginxqueue      workqueue.RateLimitingInterface
 
 	//For udp
 	protoToPort    *ProtoToPort
 	prePortToProto *ProtoToPort
 	deltaL4Update  *ProtoToPort
 
-	portToTcp		*ProtoToPort
-	prePortToTcp	*ProtoToPort
-	deltaTcpUpdate  *ProtoToPort
+	portToTcp      *ProtoToPort
+	prePortToTcp   *ProtoToPort
+	deltaTcpUpdate *ProtoToPort
 
-	nginxAddr      map[string]string
-	preNginxAddr   map[string]string
-	deltaAddr      map[string]string
-	lvsManager     *ipvs.LvsManager
+	deltaAddr DeltaAddr
+
+	lvsManager *ipvs.LvsManager
 
 	//Flag to trigger process
 	uflag bool
 	tflag bool
-	nflag bool
 }
 
 func (lbc *LoadBalancerController) enqueueCm(obj interface{}) {
@@ -70,33 +75,128 @@ func (lbc *LoadBalancerController) updateCm(newobj, oldobj interface{}) {
 	if reflect.DeepEqual(oldCm.Data, newCm.Data) {
 		return
 	}
+
+	lbc.listNginx()
 	lbc.enqueueCm(newobj)
 }
 
-func (lbc *LoadBalancerController) DeletedCm(obj interface{}) {
-	cm := obj.(*v1.ConfigMap)
-	if cm.GetName()
+func (lbc *LoadBalancerController) listNginx() {
 
-}
+	var options v2.ListOptions
+	podlist, err := lbc.client.CoreV1().Pods(nginxServer).List(options)
 
-func (lbc *LoadBalancerController) enqueueNginx(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		fmt.Printf("Couldn't get key for layer 3 obj %v\n", err)
-		return
+		fmt.Printf("Failed to list pods, err %+v\n", err)
 	}
-	lbc.nginxqueue.Add(key)
+
+	lbc.deltaAddr.lock.Lock()
+	defer lbc.deltaAddr.lock.Unlock()
+
+	for key, _ := range lbc.deltaAddr.addrs {
+		delete(lbc.deltaAddr.addrs, key)
+	}
+
+	for _, v := range podlist.Items {
+		if strings.Contains(v.GetName(), nginxPattern) && v.Status.PodIP != "" {
+		key := add + "_" + v.GetName()
+		lbc.deltaAddr.addrs[key] = v.Status.PodIP
+		}
+	}
+	
+	for key, _ := range lbc.deltaAddr.addrs {
+		fmt.Printf("list pods, %+v, ip %+v\n",lbc.deltaAddr.addrs[key], key)
+	}
 }
 
-func (lbc *LoadBalancerController) updateNginx(newobj, oldobj interface{}) {
-	oldPod := oldobj.(*v1.Pod)
+func (lbc *LoadBalancerController) listCm() {
+	var options v2.ListOptions
+	cmlist, err := lbc.client.CoreV1().ConfigMaps(nginxServer).List(options)
+	
+	if err != nil {
+		fmt.Printf("Failed to list cm, err %+v\n", err)
+	}
+	
+        for key, _ := range lbc.deltaL4Update.core {
+		delete(lbc.deltaL4Update.core, key)
+		delete(lbc.deltaTcpUpdate.core, key)
+	}
+
+	for _, v := range cmlist.Items {
+		if strings.Contains(v.GetName(), "udp-services") {
+		for key, _ := range v.Data {
+			lbc.deltaL4Update.core[key] = "add"
+			}
+		}
+		if strings.Contains(v.GetName(), "tcp-services") {
+		for key, _ := range v.Data {
+			lbc.deltaTcpUpdate.core[key] = "add"
+			}
+		}
+	}
+        
+	for key, v := range lbc.deltaL4Update.core {
+		fmt.Printf("key cm list are %v and %v \n", key, v)
+	}
+}
+
+func (lbc *LoadBalancerController) AddrAddFunc(obj interface{}) {
+
+	var addr AddrStore
+	pod := obj.(*v1.Pod)
+
+	if pod.GetNamespace() == nginxServer && strings.Contains(pod.GetName(), nginxPattern) && pod.Status.PodIP != "" {
+		addr.Addr = pod.Status.PodIP
+		addr.Name = pod.GetName()
+		addr.Action = add + "_" + addr.Name
+
+		lbc.deltaAddr.lock.Lock()
+		defer lbc.deltaAddr.lock.Unlock()
+
+		lbc.deltaAddr.addrs[addr.Action] = addr.Addr
+	}
+}
+
+func (lbc *LoadBalancerController) AddrUpdateFunc(newobj, oldobj interface{}) {
+	//oldPod := oldobj.(*v1.Pod)
 	newPod := newobj.(*v1.Pod)
 
-	if strings.Contains(newPod.GetName(), "nginx-ingress-controller") && oldPod.Status.PodIP != newPod.Status.PodIP {
-		//in our case, we need to separate add keys and del keys,
-		lbc.enqueueNginx(newobj)
+	if newPod.GetNamespace() == nginxServer && newPod.Status.PodIP != "" {
+
+		addr := make(map[string]string)
+		if newPod.GetDeletionTimestamp() != nil {
+			// delete pods...
+			addr[deletion+"_"+newPod.GetName()] = newPod.Status.PodIP
+		} else {
+			addr[add+"_"+newPod.GetName()] = newPod.Status.PodIP
+			// add pods ...
+		}
+		if ok := lbc.EnsureAddr(addr); !ok {
+			fmt.Printf("updating nginxServer %v\n", newPod.GetName())
+		}
+		lbc.listCm()
 	}
 	return
+}
+
+func (lbc *LoadBalancerController) EnsureAddr(addr map[string]string) bool {
+
+	lbc.deltaAddr.lock.Lock()
+	defer lbc.deltaAddr.lock.Unlock()
+
+	for key, _ := range lbc.deltaAddr.addrs {
+		delete(lbc.deltaAddr.addrs, key)
+	}
+
+	for key, ip := range addr {
+		if _, ok := lbc.deltaAddr.addrs[key]; ok {
+			if reflect.DeepEqual(lbc.deltaAddr.addrs[key], ip) {
+				return true
+			}
+		} else {
+			lbc.deltaAddr.addrs[key] = ip
+		}
+	}
+	return true
 }
 
 func (lbc *LoadBalancerController) ipvsWorker() {
@@ -126,7 +226,7 @@ func (lbc *LoadBalancerController) ipvsWorker() {
 		} else if cm.GetName() == "udp-services" {
 			for key, _ := range cm.Data {
 				lbc.protoToPort.Write(key, "udp")
-					fmt.Printf("ipvsWorker layer l4 port proto %v udp\n", key)
+				fmt.Printf("ipvsWorker layer l4 port proto %v udp\n", key)
 			}
 			lbc.uflag = true
 		}
@@ -139,75 +239,6 @@ func (lbc *LoadBalancerController) ipvsWorker() {
 			return
 		}
 	}
-}
-
-func (lbc *LoadBalancerController) hostWorker() {
-	workFunc := func() bool {
-		key, ok := lbc.nginxqueue.Get()
-		if ok {
-			return true
-		}
-		defer lbc.queue.Done(key)
-
-		obj, exist, err := lbc.ngnixStore.GetByKey(key.(string))
-		if !exist {
-			fmt.Printf("nginx controller host has been lost, failed to get %v\n", key)
-			return false
-		}
-		if err != nil {
-			fmt.Printf("err to get nginx controller pod info, failed to get %v\n", err)
-			return false
-		}
-		pod := obj.(*v1.Pod)
-
-		//FIXME(peiqishi): need to change "nginx-ingress-controller" to a config flag Pnginx
-		if strings.Contains(pod.GetName(), "nginx-ingress-controller")&&pod.Status.HostIP != "" {
-			//IN our case, we need to separate add keys and del keys,
-			lbc.nginxAddr[pod.Status.HostIP] = "add"
-			fmt.Printf("nginx controller to add pod info, addr %v\n", pod.Status.PodIP)
-		}
-		lbc.nflag = true
-		return false
-	}
-
-	for {
-		if quit := workFunc(); quit {
-			fmt.Printf("nginx controller hostWoker shutting down")
-			return
-		}
-	}
-}
-
-func (lbc *LoadBalancerController) NPreProcess() {
-	if reflect.DeepEqual(lbc.nginxAddr, lbc.preNginxAddr) {
-		return
-	}
-	for key, _ := range lbc.deltaAddr {
-		delete(lbc.deltaAddr, key)
-	}
-	for addr, _ := range lbc.nginxAddr {
-		if _, ok := lbc.preNginxAddr[addr]; !ok {
-			lbc.deltaAddr[addr] = "add"
-			fmt.Printf("NPreProcess nginx controller add %v\n", addr)
-		}
-	}
-
-	for addr, _ := range lbc.preNginxAddr {
-		if _, ok := lbc.nginxAddr[addr]; !ok {
-			lbc.deltaAddr[addr] = "del"
-			fmt.Printf("NPreProcess nginx controller del %v\n", addr)
-		}
-	}
-
-	for key, _ := range lbc.preNginxAddr {
-		delete(lbc.preNginxAddr, key)
-	}
-
-	for key, _ := range lbc.nginxAddr {
-		lbc.preNginxAddr[key] = lbc.nginxAddr[key]
-		delete(lbc.nginxAddr, key)
-	}
-	return
 }
 
 func (lbc *LoadBalancerController) PreProcess() {
@@ -265,9 +296,9 @@ func (lbc *LoadBalancerController) PreTcpProcess() {
 			lbc.deltaTcpUpdate.core[port] = "add"
 		}
 		//else if lbc.prePortToTcp.core[port] != proto {
-			// very rare, but note it anyway;
-			// change protocol
-			//lbc.deltaTcpUpdate.core[port] = "update"
+		// very rare, but note it anyway;
+		// change protocol
+		//lbc.deltaTcpUpdate.core[port] = "update"
 		//}
 	}
 	for port, _ := range lbc.prePortToTcp.core {
@@ -303,28 +334,24 @@ func (lbc *LoadBalancerController) ProcessItem() {
 			lbc.PreTcpProcess()
 			lbc.tflag = false
 		}
-		if lbc.nflag {
-			time.Sleep(10 * time.Millisecond)
-			lbc.NPreProcess()
-			lbc.nflag = false
-		}
 
 		//optiminse needs to be done; store the previous states, compare with the
 		//current one; select the different elements, and call ipvs func according
 		//the result
-		for addr, act := range lbc.deltaAddr {
-			//fmt.Printf("Testing 2...add host and act %+v, %+v\n", addr, act)
+		lbc.deltaAddr.lock.RLock()
+		defer lbc.deltaAddr.lock.RUnlock()
+		for key, addr := range lbc.deltaAddr.addrs {
+			arrary := strings.Split(key, "_")
+			//fmt.Printf("Testing 2...add host and act %+v, %+v\n", key, addr)
 
-			switch act {
-
-			case "add":
+			switch arrary[0] {
+			case "adding":
 				{
 					for port, act := range lbc.deltaL4Update.core {
 						value := "udp"
 						switch act {
 						case "add":
 							if err := lbc.lvsManager.Sync(addr, port, value); err != nil {
-								delete(lbc.deltaAddr, addr)
 								fmt.Printf("Failed to sync ipvs dr mode, err %+v\n", err)
 							}
 						case "del":
@@ -344,7 +371,6 @@ func (lbc *LoadBalancerController) ProcessItem() {
 						switch act {
 						case "add":
 							if err := lbc.lvsManager.Sync(addr, port, value); err != nil {
-								delete(lbc.deltaAddr, addr)
 								fmt.Printf("Failed to sync ipvs dr mode, err %+v\n", err)
 							}
 						case "del":
@@ -359,23 +385,15 @@ func (lbc *LoadBalancerController) ProcessItem() {
 							fmt.Printf("Failed, found unrecognizable action")
 						}
 					}
+					//delete(lbc.deltaAddr, addr)
 				}
-			case "del":
+			case "deleting":
 				{
-					for port, _ := range lbc.deltaL4Update.core {
-						if err := lbc.lvsManager.Del(addr, port, "udp"); err != nil {
-							delete(lbc.deltaAddr, addr)
-							fmt.Printf("Failed to clear dirty real server, err %+v\n", err)
-						}
+					if err := lbc.lvsManager.DelRServer(addr); err != nil {
+						fmt.Printf("Failed to clear dirty real server, err %+v\n", err)
 					}
-					for port, _ := range lbc.deltaTcpUpdate.core {
-						if err := lbc.lvsManager.Del(addr, port, "tcp"); err != nil {
-							delete(lbc.deltaAddr, addr)
-							fmt.Printf("Failed to clear dirty real server, err %+v\n", err)
-						}
-					}
-					fmt.Printf("testing end 2... %v\n", addr)
 				}
+				//delete(lbc.deltaAddr, addr)
 			}
 		}
 
@@ -392,9 +410,8 @@ func (lbc *LoadBalancerController) ProcessItem() {
 
 func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 	lbc := &LoadBalancerController{
-		client:     cfg.Client,
-		queue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "addipvs_layer4"),
-		nginxqueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "addipvs_layer3"),
+		client: cfg.Client,
+		queue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "addipvs_layer4"),
 	}
 
 	lbc.protoToPort = newProtoToPort()
@@ -408,13 +425,10 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 	lbc.lvsManager = ipvs.NewLvsManager()
 	lbc.lvsManager.Init()
 
-	lbc.nginxAddr = make(map[string]string)
-	lbc.preNginxAddr = make(map[string]string)
-	lbc.deltaAddr = make(map[string]string)
+	lbc.deltaAddr.addrs = make(map[string]string)
 
 	lbc.uflag = false
 	lbc.tflag = false
-	lbc.nflag = false
 
 	lbc.store, lbc.controller = cache.NewInformer(
 		&cache.ListWatch{
@@ -434,7 +448,7 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 		},
 	)
 
-	lbc.ngnixStore, lbc.nginxController = cache.NewInformer(
+	_, lbc.nginxController = cache.NewInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v2.ListOptions) (runtime.Object, error) {
 				return lbc.client.CoreV1().Pods(v1.NamespaceAll).List(options)
@@ -446,9 +460,8 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 		&v1.Pod{},
 		0,
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    lbc.enqueueNginx,
-			UpdateFunc: lbc.updateNginx,
-			DeleteFunc: lbc.enqueueNginx,
+			AddFunc:    lbc.AddrAddFunc,
+			UpdateFunc: lbc.AddrUpdateFunc,
 		},
 	)
 	return lbc
@@ -467,12 +480,10 @@ func (lbc *LoadBalancerController) Run(workers int, stopCh <-chan struct{}) {
 
 	for i := 0; i < workers; i++ {
 		go wait.Until(lbc.ProcessItem, time.Second, stopCh)
-		go wait.Until(lbc.hostWorker, time.Second, stopCh)
 		go wait.Until(lbc.ipvsWorker, time.Second, stopCh)
 	}
 
 	<-stopCh
 	fmt.Printf("Shutting down ipvs config controller")
 	lbc.queue.ShutDown()
-	lbc.nginxqueue.ShutDown()
 }
