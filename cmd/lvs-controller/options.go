@@ -18,6 +18,7 @@ func NewOptions() *Options {
 
 // AddFlags add flags to app
 func (opts *Options) AddFlags(app *cli.App) {
+
 	opts.Cfg.AddFlags(app)
 
 	flags := []cli.Flag{
@@ -35,3 +36,4 @@ func (opts *Options) AddFlags(app *cli.App) {
 
 	app.Flags = append(app.Flags, flags...)
 }
+

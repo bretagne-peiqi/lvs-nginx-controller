@@ -17,7 +17,7 @@ type AddrStore struct {
 
 type DeltaAddr struct {
 	lock   sync.RWMutex
-	addrs  map[string]string	
+	addrs  map[string]string
 }
 
 type PortToNginx struct {

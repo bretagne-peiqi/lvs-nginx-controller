@@ -6,19 +6,27 @@ import (
 	"os"
 	"sort"
 
-	 ipvs "github.com/lvs-controller/pkg/controller"
+	ipvs "github.com/lvs-controller/pkg/controller"
 
-	"github.com/golang/glog"
-    "gopkg.in/urfave/cli.v1"
+	glog "github.com/zoumo/logdog"
+	"gopkg.in/urfave/cli.v1"
 
-    "k8s.io/apimachinery/pkg/util/wait"
-    "k8s.io/client-go/kubernetes"
-    "k8s.io/client-go/tools/clientcmd"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 func RunController(opts *Options, stopCh <-chan struct{}) error {
+
 	glog.Infof("The ipvs controller started ...")
 
+	if opts.Debug {
+		glog.ApplyOptions(glog.DebugLevel)
+	} else {
+		glog.ApplyOptions(glog.InfoLevel)
+	}
+
+	//build config
 	glog.Infof("load kubeconfig from %s", opts.Kubeconfig)
 	config, err := clientcmd.BuildConfigFromFlags("", opts.Kubeconfig)
 	if err != nil {
@@ -35,18 +43,22 @@ func RunController(opts *Options, stopCh <-chan struct{}) error {
 	opts.Cfg.Client = clientset
 
 	controller := ipvs.NewLoadBalancerController(opts.Cfg)
-	controller.Run(1,wait.NeverStop)
+	if err := controller.Initial(); err != nil {
+		return fmt.Errorf("Failed initial ipvs controller, err %v\n", err)
+	}
+	controller.Run(5, wait.NeverStop)
 
 	return nil
 }
 
 func main() {
-	//fixme
+	//FIXME
 	flag.CommandLine.Parse([]string{})
 
 	app := cli.NewApp()
 	app.Name = "ipvs-controller"
-	app.Usage = "sync k8s ingress-controller resources for ip_vs loadbalancer"
+	app.Usage = "sync k8s ingress-controller resources for ip_vs loadbalancer\n    This controller is intented to used at L4 level, but we need to config ports 80&443 definitivily\n    when combining used with nginx-ingress-controller"
+	app.Version = "beta 1.0"
 
 	opts := NewOptions()
 	opts.AddFlags(app)

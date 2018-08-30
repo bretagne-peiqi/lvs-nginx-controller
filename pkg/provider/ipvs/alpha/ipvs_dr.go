@@ -7,21 +7,22 @@ import (
 	"strconv"
 	"syscall"
 
-	//"github.com/lvs-controller/pkg/config"
+	"github.com/lvs-controller/pkg/config"
 
-	"github.com/golang/glog"
+	glog "github.com/zoumo/logdog"
 	"github.com/pshi/libipvs"
 )
 
 const (
 	providerName = "ipvsdr"
-	vip          = "10.135.135.37"
 )
 
 type LvsManager struct {
 	initialized bool
 	name        string
 	handle      libipvs.IPVSHandle
+	vip			net.IP
+	SchedName   string
 }
 
 func NewLvsManager() *LvsManager {
@@ -29,43 +30,46 @@ func NewLvsManager() *LvsManager {
 	return lm
 }
 
-func (lm *LvsManager) Init() {
+func (lm *LvsManager) Init(cfg config.Config) {
+
 	if lm.initialized {
 		return
 	}
+
 	lm.initialized = true
 	glog.Info("Initialize the ipvs provider ...")
 
-	lm.name = "ipvs-provider"
+	lm.name = providerName
+	lm.vip = net.ParseIP(cfg.Vip)
+	lm.SchedName = cfg.SchedName
 
 	handle, err := libipvs.New()
 	lm.handle = handle
 	if err != nil {
-		glog.Info("Failed to create new ipvs provider ... exited -1")
-		panic(err)
+		glog.Error("Failed to create new ipvs provider ... exited")
 	}
+
 	if err := lm.handle.Flush(); err != nil {
-		glog.Info("Failed to flush old ipvs hash table ... exited -1")
-		panic(err)
+		glog.Error("Failed to flush old ipvs hash table ... exited")
 	}
 }
 
-//###fixme the triggle should be port ???
+//###FIXME the triggle should be port ???
 func (lm *LvsManager) Sync(daddr, dport, proto string) error {
 	if ok := checkArgs(daddr, dport); !ok {
 		fmt.Printf("Failed, illegal addr&port args in add %v, %v\n", daddr, dport)
-		return nil 
+		return nil
 	}
 
 	//for test purpose
 	vport, _ := strconv.Atoi(dport)
 	if proto == "udp" {
 		svc := libipvs.Service{
-			Address:       net.ParseIP(vip),
+			Address:       lm.vip,
 			AddressFamily: syscall.AF_INET,
 			Protocol:      libipvs.Protocol(syscall.IPPROTO_UDP),
 			Port:          uint16(vport),
-			SchedName:     libipvs.RoundRobin,
+			SchedName:     lm.SchedName,
 		}
 		if _, err := lm.EnsureService(svc); err != nil {
 			return fmt.Errorf("Failed to update tcp svc existed %v\n", err)
@@ -113,7 +117,7 @@ func (lm *LvsManager) Sync(daddr, dport, proto string) error {
 func (lm *LvsManager) Del(daddr, dport, proto string) error {
 	if ok := checkArgs(daddr, dport); !ok {
 		fmt.Printf("Failed, illegal addr&port args in del %v, %v\n", daddr, dport)
-		return nil 
+		return nil
 	}
 	//for test purpose
 	vport, _ := strconv.Atoi(dport)
@@ -166,7 +170,7 @@ func (lm *LvsManager) Del(daddr, dport, proto string) error {
 func (lm *LvsManager) Update(daddr, dport, proto string) error {
 	if ok := checkArgs(daddr, dport); !ok {
 		fmt.Printf("Failed, illegal addr&port args in update %v, %v\n", daddr, dport)
-		return nil 
+		return nil
 	}
 	//for test purpose
 	vport, _ := strconv.Atoi(dport)

@@ -102,7 +102,7 @@ func (lbc *LoadBalancerController) listNginx() {
 		lbc.deltaAddr.addrs[key] = v.Status.PodIP
 		}
 	}
-	
+
 	for key, _ := range lbc.deltaAddr.addrs {
 		fmt.Printf("list pods, %+v, ip %+v\n",lbc.deltaAddr.addrs[key], key)
 	}
@@ -111,11 +111,11 @@ func (lbc *LoadBalancerController) listNginx() {
 func (lbc *LoadBalancerController) listCm() {
 	var options v2.ListOptions
 	cmlist, err := lbc.client.CoreV1().ConfigMaps(nginxServer).List(options)
-	
+
 	if err != nil {
 		fmt.Printf("Failed to list cm, err %+v\n", err)
 	}
-	
+
         for key, _ := range lbc.deltaL4Update.core {
 		delete(lbc.deltaL4Update.core, key)
 		delete(lbc.deltaTcpUpdate.core, key)
@@ -133,7 +133,7 @@ func (lbc *LoadBalancerController) listCm() {
 			}
 		}
 	}
-        
+
 	for key, v := range lbc.deltaL4Update.core {
 		fmt.Printf("key cm list are %v and %v \n", key, v)
 	}
@@ -241,105 +241,12 @@ func (lbc *LoadBalancerController) ipvsWorker() {
 	}
 }
 
-func (lbc *LoadBalancerController) PreProcess() {
-
-	if reflect.DeepEqual(lbc.prePortToProto, lbc.protoToPort) {
-		return
-	}
-
-	for key, _ := range lbc.deltaL4Update.core {
-		delete(lbc.deltaL4Update.core, key)
-	}
-
-	//FIXME(peiqishi) optimize the algorithm
-	for port, proto := range lbc.protoToPort.core {
-		if _, ok := lbc.prePortToProto.core[port]; !ok {
-			//store the new key
-			lbc.deltaL4Update.core[port] = "add"
-		} else if lbc.prePortToProto.core[port] != proto {
-			// very rare, but note it anyway;
-			// change protocol
-			lbc.deltaL4Update.core[port] = "update"
-		}
-	}
-
-	for port, _ := range lbc.prePortToProto.core {
-		if _, pok := lbc.protoToPort.core[port]; !pok {
-			//need to delete the dead
-			lbc.deltaL4Update.core[port] = "del"
-		}
-	}
-
-	for key, v := range lbc.prePortToProto.core {
-		fmt.Printf("PreProcess l4 pre ... %v %v\n", key, v)
-		delete(lbc.prePortToProto.core, key)
-	}
-
-	for key, _ := range lbc.protoToPort.core {
-		lbc.prePortToProto.core[key] = lbc.protoToPort.core[key]
-		delete(lbc.protoToPort.core, key)
-	}
-
-	return
-}
-
-func (lbc *LoadBalancerController) PreTcpProcess() {
-
-	for key, _ := range lbc.deltaTcpUpdate.core {
-		delete(lbc.deltaTcpUpdate.core, key)
-	}
-
-	//FIXME(peiqishi) optimize the algorithm
-	for port, _ := range lbc.portToTcp.core {
-		if _, ok := lbc.prePortToTcp.core[port]; !ok {
-			//store the new key
-			lbc.deltaTcpUpdate.core[port] = "add"
-		}
-		//else if lbc.prePortToTcp.core[port] != proto {
-		// very rare, but note it anyway;
-		// change protocol
-		//lbc.deltaTcpUpdate.core[port] = "update"
-		//}
-	}
-	for port, _ := range lbc.prePortToTcp.core {
-		if _, pok := lbc.portToTcp.core[port]; !pok {
-			//need to delete the dead
-			lbc.deltaTcpUpdate.core[port] = "del"
-		}
-	}
-
-	for key, v := range lbc.prePortToTcp.core {
-		fmt.Printf("PreProcess l4 pre ... %v %v\n", key, v)
-		delete(lbc.prePortToTcp.core, key)
-	}
-
-	for key, _ := range lbc.portToTcp.core {
-		lbc.prePortToTcp.core[key] = lbc.portToTcp.core[key]
-		delete(lbc.portToTcp.core, key)
-	}
-
-	return
-}
 func (lbc *LoadBalancerController) ProcessItem() {
 
 	processFunc := func() bool {
 
-		if lbc.uflag {
-			time.Sleep(10 * time.Millisecond)
-			lbc.PreProcess()
-			lbc.uflag = false
-		}
-		if lbc.tflag {
-			time.Sleep(10 * time.Millisecond)
-			lbc.PreTcpProcess()
-			lbc.tflag = false
-		}
+		cond.
 
-		//optiminse needs to be done; store the previous states, compare with the
-		//current one; select the different elements, and call ipvs func according
-		//the result
-		lbc.deltaAddr.lock.RLock()
-		defer lbc.deltaAddr.lock.RUnlock()
 		for key, addr := range lbc.deltaAddr.addrs {
 			arrary := strings.Split(key, "_")
 			//fmt.Printf("Testing 2...add host and act %+v, %+v\n", key, addr)
@@ -358,10 +265,6 @@ func (lbc *LoadBalancerController) ProcessItem() {
 							if err := lbc.lvsManager.Del(addr, port, value); err != nil {
 								fmt.Printf("Failed to del ipvs dr mode, err %+v\n", err)
 							}
-						case "update":
-							if err := lbc.lvsManager.Update(addr, port, value); err != nil {
-								fmt.Printf("Failed to update ipvs dr mode, err %+v\n", err)
-							}
 						default:
 							fmt.Printf("Failed, found unrecognizable action")
 						}
@@ -376,10 +279,6 @@ func (lbc *LoadBalancerController) ProcessItem() {
 						case "del":
 							if err := lbc.lvsManager.Del(addr, port, value); err != nil {
 								fmt.Printf("Failed to del ipvs dr mode, err %+v\n", err)
-							}
-						case "update":
-							if err := lbc.lvsManager.Update(addr, port, value); err != nil {
-								fmt.Printf("Failed to update ipvs dr mode, err %+v\n", err)
 							}
 						default:
 							fmt.Printf("Failed, found unrecognizable action")
@@ -423,7 +322,7 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 	lbc.deltaTcpUpdate = newProtoToPort()
 
 	lbc.lvsManager = ipvs.NewLvsManager()
-	lbc.lvsManager.Init()
+	lbc.lvsManager.Init(cfg)
 
 	lbc.deltaAddr.addrs = make(map[string]string)
 

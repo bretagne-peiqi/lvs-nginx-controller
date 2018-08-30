@@ -35,6 +35,7 @@ func main() {
 		Protocol:      libipvs.Protocol(syscall.IPPROTO_TCP),
 		Port:          80,
 		SchedName:     libipvs.RoundRobin,
+		net.pa
 	}
 
 	if err := h.NewService(&svc); err != nil {

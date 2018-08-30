@@ -9,7 +9,7 @@ type Config struct {
 	Client	  kubernetes.Interface
 
 	SchedName string
-	VIP		  string
+	Vip		  string
 }
 
 // AddFlags add flags to app
@@ -18,16 +18,17 @@ func (c *Config) AddFlags(app *cli.App) {
 	flags := []cli.Flag{
 		// ipvsdr
 		cli.StringFlag{
-			Name:		 "SchedName",
-			Usage:		 "Ipvs Sched Algorithm Method",
+			Name:		 "schedname",
+			Usage:		 "Ipvs Sched Algorithm Method, currently supported: rr, lc, sh, dh",
 			Destination: &c.SchedName,
 		},
 
 		cli.StringFlag {
-			Name:			"VIP",
-			Usage:			"Virtual IP of our linux virtual server",
-			Destination:	&c.VIP,
+			Name:		    "vip",
+			Usage:		    "Virtual IP of our linux virtual server",
+			Destination:	&c.Vip,
 		},
 	}
+
 	app.Flags = append(app.Flags, flags...)
 }
