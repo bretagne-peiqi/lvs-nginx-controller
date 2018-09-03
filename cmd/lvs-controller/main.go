@@ -14,9 +14,9 @@ import (
 	glog "github.com/zoumo/logdog"
 	"gopkg.in/urfave/cli.v1"
 
-	//"net/http/pprof"
+	_ "net/http/pprof"
 	"net/http"
-	pprof "runtime/pprof"
+	//pprof "runtime/pprof"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -87,49 +87,12 @@ func main() {
 			num := strconv.FormatInt(int64(runtime.NumGoroutine()), 10)
 			w.Write([]byte(num))
 		})
-		http.ListenAndServe("localhost:8081", nil)
+		http.ListenAndServe("localhost:8081", http.DefaultServeMux)
 		glog.Info("goroutine stats and pprof listen on 8081")
 
-	}()
-
-	go func() {
-		http.HandleFunc("/heap", hhandler)
-		http.ListenAndServe("localhost:8081", nil)
-		glog.Info("heap stats and pprof listen on 8081")
-	}()
-	go func() {
-		http.HandleFunc("/threadcreate", thandler)
-		http.ListenAndServe("localhost:8081", nil)
-		glog.Info("threadcreate stats and pprof listen on 8081")
-	}()
-	go func() {
-		http.HandleFunc("/block", bhandler)
-		http.ListenAndServe("localhost:8081", nil)
-		glog.Info("block stats and pprof listen on 8081")
 	}()
 
 	sort.Sort(cli.FlagsByName(app.Flags))
 	app.Run(os.Args)
 
-}
-
-func hhandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	//There are goroutine, threadcreate, heap, block total four kind of resource to watch...
-	p := pprof.Lookup("heap")
-	p.WriteTo(w, 1)
-}
-
-func thandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	//There are goroutine, threadcreate, heap, block total four kind of resource to watch...
-	p := pprof.Lookup("threadcreate")
-	p.WriteTo(w, 1)
-}
-
-func bhandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-	//There are goroutine, threadcreate, heap, block total four kind of resource to watch...
-	p := pprof.Lookup("block")
-	p.WriteTo(w, 1)
 }
