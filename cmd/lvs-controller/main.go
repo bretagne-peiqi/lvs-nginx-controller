@@ -6,10 +6,17 @@ import (
 	"os"
 	"sort"
 
+	"runtime"
+	"strconv"
+
 	ipvs "github.com/lvs-controller/pkg/controller"
 
 	glog "github.com/zoumo/logdog"
 	"gopkg.in/urfave/cli.v1"
+
+	//"net/http/pprof"
+	"net/http"
+	pprof "runtime/pprof"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -44,7 +51,7 @@ func RunController(opts *Options, stopCh <-chan struct{}) error {
 
 	controller := ipvs.NewLoadBalancerController(opts.Cfg)
 	if err := controller.Initial(); err != nil {
-		 glog.Fatalf("Failed initial ipvs controller, err %v\n", err)
+		glog.Fatalf("Failed initial ipvs controller, err %v\n", err)
 	}
 	controller.Run(5, wait.NeverStop)
 
@@ -58,10 +65,14 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "ipvs-controller"
 	app.Usage = "sync k8s ingress-controller resources for ip_vs loadbalancer\n    This controller is intented to used at L4 level, but we need to config ports 80&443 definitivily\n    when combining used with nginx-ingress-controller"
-	app.Version = "Beta 1.0"
+	app.Version = "beta 1.0"
 
 	opts := NewOptions()
 	opts.AddFlags(app)
+
+	go func() {
+		http.ListenAndServe("localhost:6060", nil)
+	}()
 
 	app.Action = func(c *cli.Context) error {
 		if err := RunController(opts, wait.NeverStop); err != nil {
@@ -71,7 +82,54 @@ func main() {
 		return nil
 	}
 
-	sort.Sort(cli.FlagsByName(app.Flags))
+	go func() {
+		http.HandleFunc("/goroutines", func(w http.ResponseWriter, r *http.Request) {
+			num := strconv.FormatInt(int64(runtime.NumGoroutine()), 10)
+			w.Write([]byte(num))
+		})
+		http.ListenAndServe("localhost:8081", nil)
+		glog.Info("goroutine stats and pprof listen on 8081")
 
+	}()
+
+	go func() {
+		http.HandleFunc("/heap", hhandler)
+		http.ListenAndServe("localhost:8081", nil)
+		glog.Info("heap stats and pprof listen on 8081")
+	}()
+	go func() {
+		http.HandleFunc("/threadcreate", thandler)
+		http.ListenAndServe("localhost:8081", nil)
+		glog.Info("threadcreate stats and pprof listen on 8081")
+	}()
+	go func() {
+		http.HandleFunc("/block", bhandler)
+		http.ListenAndServe("localhost:8081", nil)
+		glog.Info("block stats and pprof listen on 8081")
+	}()
+
+	sort.Sort(cli.FlagsByName(app.Flags))
 	app.Run(os.Args)
+
+}
+
+func hhandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	//There are goroutine, threadcreate, heap, block total four kind of resource to watch...
+	p := pprof.Lookup("heap")
+	p.WriteTo(w, 1)
+}
+
+func thandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	//There are goroutine, threadcreate, heap, block total four kind of resource to watch...
+	p := pprof.Lookup("threadcreate")
+	p.WriteTo(w, 1)
+}
+
+func bhandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	//There are goroutine, threadcreate, heap, block total four kind of resource to watch...
+	p := pprof.Lookup("block")
+	p.WriteTo(w, 1)
 }

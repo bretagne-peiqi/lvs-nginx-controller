@@ -429,5 +429,6 @@ func (lbc *LoadBalancerController) Run(workers int, stopCh <-chan struct{}) {
 	}
 
 	<-stopCh
+	close(lbc.lbstore)
 	glog.Error("Shutting down ipvs config controller")
 }
