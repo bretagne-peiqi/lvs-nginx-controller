@@ -69,6 +69,15 @@ func (lbc *LoadBalancerController) Initial() error {
 	if err := lbc.listCm(); err != nil {
 		return fmt.Errorf("Failed to initial list l4 configmaps; err: %v\n", err)
 	}
+
+	for key, _ := range lbc.plbdata.Tcp {
+		lbc.ExTcp[key] = protoTcp
+	}
+
+	for key, _ := range lbc.plbdata.Udp {
+		lbc.ExUdp[key] = protoUdp
+	}
+
 	if err := lbc.listNginx(lbc.plbdata); err != nil {
 		return fmt.Errorf("Failed to initial list l4 addrs; err: %v\n", err)
 	}
@@ -83,7 +92,7 @@ func (lbc *LoadBalancerController) Initial() error {
 
 }
 
-func (lbc *LoadBalancerController) updatePorts(newobj, oldobj interface{}) {
+func (lbc *LoadBalancerController) updatePorts(oldobj, newobj interface{}) {
 	oldCm := oldobj.(*v1.ConfigMap)
 	cm := newobj.(*v1.ConfigMap)
 
@@ -106,9 +115,10 @@ func (lbc *LoadBalancerController) updatePorts(newobj, oldobj interface{}) {
 			ok, port := ValidatePort(key)
 			if !ok {
 				glog.Errorf("Update Ports Func found invalid port %v\n", key)
+			} else {
+				lbc.NwTcp[port] = protoTcp
+				glog.Debugf("Update Ports Func updating layer l4 port proto %v tcp\n", key)
 			}
-			lbc.NwTcp[port] = protoTcp
-			glog.Debugf("Update Ports Func updating layer l4 port proto %v tcp\n", key)
 		}
 		lbc.clbdata.L4Compare(lbc.ExTcp, lbc.NwTcp, lbc.clbdata.Tcp)
 		if err := lbc.listNginx(lbc.clbdata); err != nil {
@@ -130,9 +140,10 @@ func (lbc *LoadBalancerController) updatePorts(newobj, oldobj interface{}) {
 			ok, port := ValidatePort(key)
 			if !ok {
 				glog.Errorf("Update Ports Func found invalid port %v\n", key)
+			} else {
+				lbc.NwUdp[port] = protoUdp
+				glog.Debugf("Update Ports Func updating layer l4 port proto %v udp\n", key)
 			}
-			lbc.NwUdp[port] = protoUdp
-			glog.Debugf("Update Ports Func updating layer l4 port proto %v udp\n", key)
 		}
 		lbc.clbdata.L4Compare(lbc.ExUdp, lbc.NwUdp, lbc.clbdata.Udp)
 		if err := lbc.listNginx(lbc.clbdata); err != nil {
@@ -171,8 +182,9 @@ func (lbc *LoadBalancerController) listNginx(LB *LBStore) error {
 			ok, IPv4 := ValidateIPv4(pod.Status.PodIP)
 			if !ok {
 				return fmt.Errorf("Failed to parse ipv4 %v %v\n", key)
+			} else {
+				LB.Addr[key] = IPv4
 			}
-			LB.Addr[key] = IPv4
 		}
 	}
 	return nil
@@ -200,8 +212,9 @@ func (lbc *LoadBalancerController) listCm() error {
 				ok, port := ValidatePort(key)
 				if !ok {
 					return fmt.Errorf("Failed to validate udp port in listCm %v\n", key)
+				} else {
+					lbc.plbdata.Udp[port] = addition
 				}
-				lbc.plbdata.Udp[port] = addition
 			}
 		}
 		if strings.Contains(cm.GetName(), tcpService) {
@@ -209,8 +222,9 @@ func (lbc *LoadBalancerController) listCm() error {
 				ok, port := ValidatePort(key)
 				if !ok {
 					return fmt.Errorf("Failed to validate tcp port in listCm %v\n", key)
+				} else {
+					lbc.plbdata.Tcp[port] = addition
 				}
-				lbc.plbdata.Tcp[port] = addition
 			}
 		}
 	}
@@ -218,7 +232,7 @@ func (lbc *LoadBalancerController) listCm() error {
 }
 
 //FIXME this function has been deprecated, remove it
-func (lbc *LoadBalancerController) AddrAddFunc(obj interface{}) {
+func (lbc *LoadBalancerController) addrAddFunc(obj interface{}) {
 
 	pod := obj.(*v1.Pod)
 	if pod.GetNamespace() == nginxServer && strings.Contains(pod.GetName(), nginxPattern) && pod.Status.PodIP != "" {
@@ -227,13 +241,13 @@ func (lbc *LoadBalancerController) AddrAddFunc(obj interface{}) {
 		ok, addr := ValidateIPv4(pod.Status.PodIP)
 		if !ok {
 			glog.Errorf("Failed parse ipv4 %v\n", addr)
+		} else {
+			lbc.plbdata.Addr[key] = addr
 		}
-		lbc.plbdata.Addr[key] = addr
-
 	}
 }
 
-func (lbc *LoadBalancerController) AddrUpdateFunc(newobj, oldobj interface{}) {
+func (lbc *LoadBalancerController) addrUpdateFunc(newobj, oldobj interface{}) {
 	//oldPod := oldobj.(*v1.Pod)
 	newPod := newobj.(*v1.Pod)
 
@@ -254,15 +268,17 @@ func (lbc *LoadBalancerController) AddrUpdateFunc(newobj, oldobj interface{}) {
 			ok, addr := ValidateIPv4(newPod.Status.PodIP)
 			if !ok {
 				glog.Errorf("Failed parse ipv4 %v\n", addr)
+			} else {
+				lbc.plbdata.Addr[key] = addr
 			}
-			lbc.plbdata.Addr[key] = addr
 		} else {
 			key := fmt.Sprintf("adding_%v\n", newPod.GetName())
 			ok, addr := ValidateIPv4(newPod.Status.PodIP)
 			if !ok {
 				glog.Errorf("Failed parse ipv4 %v\n", addr)
+			} else {
+				lbc.plbdata.Addr[key] = addr
 			}
-			lbc.plbdata.Addr[key] = addr
 		}
 		err := lbc.listCm()
 		if err != nil {
@@ -281,7 +297,7 @@ func (lbc *LoadBalancerController) AddrUpdateFunc(newobj, oldobj interface{}) {
 	return
 }
 
-func (lbc *LoadBalancerController) ProcessItem() {
+func (lbc *LoadBalancerController) processItem() {
 
 	processFunc := func() bool {
 
@@ -379,8 +395,8 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 		&v1.Pod{},
 		0,
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    lbc.AddrAddFunc,
-			UpdateFunc: lbc.AddrUpdateFunc,
+			AddFunc:    lbc.addrAddFunc,
+			UpdateFunc: lbc.addrUpdateFunc,
 		},
 	)
 
@@ -409,7 +425,7 @@ func (lbc *LoadBalancerController) Run(workers int, stopCh <-chan struct{}) {
 
 	glog.Debugf("workers numbers total are %v\n", workers)
 	for i := 0; i < workers; i++ {
-		go wait.Until(lbc.ProcessItem, time.Second, stopCh)
+		go wait.Until(lbc.processItem, time.Second, stopCh)
 	}
 
 	<-stopCh

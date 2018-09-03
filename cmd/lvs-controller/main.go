@@ -44,7 +44,7 @@ func RunController(opts *Options, stopCh <-chan struct{}) error {
 
 	controller := ipvs.NewLoadBalancerController(opts.Cfg)
 	if err := controller.Initial(); err != nil {
-		return fmt.Errorf("Failed initial ipvs controller, err %v\n", err)
+		 glog.Fatalf("Failed initial ipvs controller, err %v\n", err)
 	}
 	controller.Run(5, wait.NeverStop)
 
@@ -58,7 +58,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "ipvs-controller"
 	app.Usage = "sync k8s ingress-controller resources for ip_vs loadbalancer\n    This controller is intented to used at L4 level, but we need to config ports 80&443 definitivily\n    when combining used with nginx-ingress-controller"
-	app.Version = "beta 1.0"
+	app.Version = "Beta 1.0"
 
 	opts := NewOptions()
 	opts.AddFlags(app)
