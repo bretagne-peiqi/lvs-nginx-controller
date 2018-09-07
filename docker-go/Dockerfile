@@ -1,5 +1,5 @@
 ###https://hub.docker.com/_/golang/   docker pull golang
-FROM docker-registry.saicstack.com/chenqiang/nginx-hello:v2.0
+FROM docker-registry.telecom.com/peiqi/nginx-hello:v2.0
 
 RUN echo "nameserver 114.114.114.114" >> /etc/resolv.conf
 

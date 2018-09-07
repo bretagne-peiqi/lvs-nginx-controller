@@ -2,7 +2,7 @@
 #
 # The script builds ocamel-controller component container, see usage function for how to run
 # the script. After build completes, following container will be built, i.e.
-#   saicstack/lvs-controller:${IMAGE_TAG}
+#   telecom/lvs-controller:${IMAGE_TAG}
 #
 # By default, IMAGE_TAG is latest.
 
@@ -22,13 +22,13 @@ function usage {
   echo -e "    \tv1.0.1. If not provided, it will build images with tag 'latest'"
   echo -e ""
   echo -e "Environment variable:"
-  echo -e " PUSH_TO_REGISTRY     \tPush images to saicstack registry or not, options: Y or N. Default value: ${PUSH_TO_REGISTRY}"
+  echo -e " PUSH_TO_REGISTRY     \tPush images to telecom registry or not, options: Y or N. Default value: ${PUSH_TO_REGISTRY}"
 }
 
 # -----------------------------------------------------------------------------
 # Parameters for building docker image, see usage.
 # -----------------------------------------------------------------------------
-# Decide if we need to push the new images to saicstack registry.
+# Decide if we need to push the new images to telecom registry.
 PUSH_TO_REGISTRY=${PUSH_TO_REGISTRY:-"N"}
 
 # Find image tag version, the tag is considered as release version.
@@ -48,25 +48,25 @@ echo "+++++ Start building lvs-nginx-controller"
 cd ${ROOT}
 
 # Build lvs-nginx-controller binary.
-docker run --rm -v `pwd`:/var/root/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller docker-registry.saicstack.com/base/golang:1.10 sh -c "cd /var/root/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller  && go build -race ."
+docker run --rm -v `pwd`:/var/root/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller docker-registry.telecom.com/base/golang:1.10 sh -c "cd /var/root/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller  && go build -race ."
 # Build lvs-nginx-controller container.
-docker build -t saicstack/lvs-controller:${IMAGE_TAG} .
-docker tag saicstack/lvs-controller:${IMAGE_TAG} docker-registry.saicstack.com/kubernetes-lb/lvs-controller:${IMAGE_TAG}
+docker build -t telecom/lvs-controller:${IMAGE_TAG} .
+docker tag telecom/lvs-controller:${IMAGE_TAG} docker-registry.telecom.com/kubernetes-lb/lvs-controller:${IMAGE_TAG}
 
 cd - > /dev/null
 
-# Decide if we need to push images to saicstack registry.
+# Decide if we need to push images to telecom registry.
 if [[ "$PUSH_TO_REGISTRY" == "Y" ]]; then
   echo ""
   echo "+++++ Start pushing lvs-controller"
-  docker push docker-registry.saicstack.com/kubernetes-lb/lvs-controller:${IMAGE_TAG}
+  docker push docker-registry.telecom.com/kubernetes-lb/lvs-controller:${IMAGE_TAG}
 fi
 
-echo "Successfully built docker image saicstack/lvs-controller:${IMAGE_TAG}"
-echo "Successfully built docker image docker-registry.saicstack.com/kubernetes-lb/lvs-controller:${IMAGE_TAG}"
+echo "Successfully built docker image telecom/lvs-controller:${IMAGE_TAG}"
+echo "Successfully built docker image docker-registry.telecom.com/kubernetes-lb/lvs-controller:${IMAGE_TAG}"
 
 # A reminder for creating Github release.
 if [[ "$#" == "1" && $1 =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo -e "Finish building release ; if this is a formal release, please remember"
-  echo -e "to create a release tag at Github at: https://github.com/peiqi-caicloud/lvs-nginx-controller/releases"
+  echo -e "to create a release tag at Github at: https://github.com/peiqi-telecom/lvs-nginx-controller/releases"
 fi
