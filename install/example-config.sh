@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-### This is for director ###
+### This is for directors ###
 ifconfig eth0:1 10.135.135.19 broadcast 10.135.135.255 netmask 255.255.255.0 up
 route add -host 10.135.135.19 dev eth0:1
 
@@ -28,7 +28,7 @@ ipvsadm-save > /etc/sysconfig/ipvsadm
 systemctl start ipvsadm
 
 
-### This is for realserver ###
+### The following config is for realservers ###
 
 echo "net.ipv4.conf.all.arp_ignore = 1
 net.ipv4.conf.all.arp_announce = 2

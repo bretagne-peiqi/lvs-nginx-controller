@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# The script builds ocamel-controller component container, see usage function for how to run
+# The script builds lvs-nginx-controller component container, see usage function for how to run
 # the script. After build completes, following container will be built, i.e.
 #   telecom/lvs-controller:${IMAGE_TAG}
 #
