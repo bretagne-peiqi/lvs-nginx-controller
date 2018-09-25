@@ -9,8 +9,12 @@ and we can scale out nginx using HPA in heavy traffic mode.
 
 external traffics will direct from lvs to ingress-nginx-controller then to endpoint service.
 
-### Adavantages of the architecture
 
+# High level Architecture
+![Architecture](./docs/lvs.jpeg "Architecture")
+
+
+### Adavantages of the architecture
 This architecture first offers a Front entrypoint for ipv4 for L7 ingress traffic, ingress-nginx-controller itself will expose node ip in public which is not good for security,
 besides, It implements the scalability (HA) of ingress-nginx-controllers, as LVS is the only entrypoint of the cluster.
 
@@ -22,7 +26,8 @@ In a very heavy traffic situation, we can also deploy several lvs pairs in Front
 This architecture avoids the vulnerability of traditinnal NodePort mode, as it exposes ports in every nodes, which may be
 good in cloud environ, but could definitly be security dangerous in bare-metal environment.
 
-## Running
+
+### Running
 In order to make it works, we need to config nodes running ingress-nginx-controller according scripts in dir install.
 
 to debug and print gc logs, run:

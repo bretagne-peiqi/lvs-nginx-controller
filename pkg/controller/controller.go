@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lvs-controller/pkg/config"
-	"github.com/lvs-controller/pkg/provider/ipvs"
+	"github.com/lvs-nginx-controller/pkg/config"
+	"github.com/lvs-nginx-controller/pkg/provider/ipvs"
 
 	glog "github.com/zoumo/logdog"
 	"k8s.io/api/core/v1"

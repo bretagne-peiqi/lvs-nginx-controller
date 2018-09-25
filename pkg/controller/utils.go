@@ -120,7 +120,8 @@ func ValidatePort(port string) (bool, uint16) {
 
 	iport, err := strconv.Atoi(port)
 	if err != nil {
-		glog.Errorf("Failed to transit port to type uint16, err %v\n", err)
-}
+		glog.Errorf("Failed to transit port to type uint16, err %v\n", err) 
+	}
+
 	return true, uint16(iport)
 }

@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strconv"
 
-	ipvs "github.com/lvs-controller/pkg/controller"
+	ipvs "github.com/lvs-nginx-controller/pkg/controller"
 
 	glog "github.com/zoumo/logdog"
 	"gopkg.in/urfave/cli.v1"

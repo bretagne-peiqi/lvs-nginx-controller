@@ -2,7 +2,7 @@
 
 # Data structure design:
 
-Suppose nginx pod should always set in hostNetwork mode.
+Suppose nginx pod always set in hostNetwork mode.
 
 In the project, we keep a data structure for storing nginx pod status: running; nginx pod Host IP; action: delete/add/update; nginx Name;
 

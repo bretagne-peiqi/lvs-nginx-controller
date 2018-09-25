@@ -3,9 +3,10 @@ package ipvs
 import (
 	"fmt"
 	"net"
+	"os/exec"
 	"syscall"
 
-	"github.com/lvs-controller/pkg/config"
+	"github.com/lvs-nginx-controller/pkg/config"
 
 	"github.com/pshi/libipvs"
 	glog "github.com/zoumo/logdog"
@@ -62,6 +63,8 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 	var svc libipvs.Service
 	var dst libipvs.Destination
 
+	var fwmark uint32
+
 	switch proto {
 	case UDP:
 		{
@@ -70,6 +73,10 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 	case TCP:
 		{
 			protocol = libipvs.Protocol(syscall.IPPROTO_TCP)
+		}
+	case FW:
+		{
+			fwmark = Fwmark
 		}
 	default:
 		return fmt.Errorf("Failed, unsupport protocol type %v, only tcp, udp supported \n", proto), svc, dst
@@ -81,6 +88,8 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 		Protocol:      protocol,
 		Port:          dport,
 		SchedName:     lm.SchedName,
+		FWMark:		   fwmark,
+		Timeout:	   persistent,
 	}
 
 	dst = libipvs.Destination{
@@ -90,6 +99,19 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 	}
 
 	return nil, svc, dst
+}
+
+// persistent timeout, firewall mark.
+func Fwmark(cfg config.Config) uint32, uint32 {
+	//we assurme that iptables module is installed by default, equally ip_nat_ftp
+	for _, port := range dports {
+		cmd := fmt.Sprintf("iptables -t mangle -A PREROUTING -d %v -i eth0 -p tcp -dport %v -j MARK --set-mark %v", vip, dport, fwmark)
+		output, err := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
+		if err != nil {
+			glog.Errorf("Failed to install iptables rules for firewall persistent netfilter marked connections, err: %v\n", err)
+		}
+	}
+	return
 }
 
 func (lm *LvsManager) Add(daddr net.IP, dport uint16, proto string) error {

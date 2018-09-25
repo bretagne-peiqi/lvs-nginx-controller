@@ -1,4 +1,4 @@
-from docker-registry.telecom.com/base/centos-saic:7.4
+from docker-registry.telecom.com/base/centos-tele:7.4
   
 RUN echo "Asia/Shanghai" > /etc/timezone
 ADD lvs-controller /lvs-controller
