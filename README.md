@@ -10,12 +10,12 @@ and we can scale out nginx using HPA in heavy traffic mode.
 external traffics will direct from lvs to ingress-nginx-controller then to endpoint service.
 
 
-# High level Architecture
+### High level Architecture
 ![Architecture](./docs/lvs.jpeg "Architecture")
 
 
 ### Adavantages of the architecture
-This architecture first offers a Front entrypoint for ipv4 for L7 ingress traffic, ingress-nginx-controller itself will expose node ip in public which is not good for security,
+This architecture first offers a Front entrypoint of ip address for L7 ingress traffic, ingress-nginx-controller itself will expose node ip in public which is not good for security,
 besides, It implements the scalability (HA) of ingress-nginx-controllers, as LVS is the only entrypoint of the cluster.
 
 Second, we can simply config tcp/udp configmaps of ingress-nginx-controller, then the lvs-nginx-controller will update and reload lvs
@@ -26,9 +26,13 @@ In a very heavy traffic situation, we can also deploy several lvs pairs in Front
 This architecture avoids the vulnerability of traditinnal NodePort mode, as it exposes ports in every nodes, which may be
 good in cloud environ, but could definitly be security dangerous in bare-metal environment.
 
+Lvs loadbalancer can offer some high-level loadlalancing feature such as persistent port connections, persistent netfilter marked connections, timeout configs set etc ...
 
 ### Running
 In order to make it works, we need to config nodes running ingress-nginx-controller according scripts in dir install.
 
-to debug and print gc logs, run:
-GODEBUG='gctrace=1' ./lvs-controller --debug --kubeconfig kubeconfig -vip 10.135.22.77 --schedname rr 2>&1>gc.log &
+to debug and print gc logs, 
+  	build:
+		go build cmd/lvs-controller/main.go
+	run:
+		GODEBUG='gctrace=1' ./lvs-controller --debug --kubeconfig kubeconfig -vip 10.135.22.77 --schedname rr 2>&1>gc.log &
