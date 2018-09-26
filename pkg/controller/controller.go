@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	nginxServer  = "ingress-nginx"
+	nginxDefault  = "ingress-nginx"
 	nginxPattern = "nginx-ingress-controller"
 
 	tcpService = "tcp-services"
@@ -40,6 +40,7 @@ var cond = sync.NewCond(locker)
 type LoadBalancerController struct {
 	client kubernetes.Interface
 
+	nginxServer string
 	//This is used to monitor layer 4 tcp && udp config updates
 	controller cache.Controller
 
@@ -166,7 +167,7 @@ func (lbc *LoadBalancerController) updatePorts(oldobj, newobj interface{}) {
 func (lbc *LoadBalancerController) listNginx(LB *LBStore) error {
 
 	var options v2.ListOptions
-	podlist, err := lbc.client.CoreV1().Pods(nginxServer).List(options)
+	podlist, err := lbc.client.CoreV1().Pods(lbc.nginxServer).List(options)
 
 	if err != nil {
 		return fmt.Errorf("Failed to list pods, err %+v\n", err)
@@ -192,7 +193,7 @@ func (lbc *LoadBalancerController) listNginx(LB *LBStore) error {
 
 func (lbc *LoadBalancerController) listCm() error {
 	var options v2.ListOptions
-	cmlist, err := lbc.client.CoreV1().ConfigMaps(nginxServer).List(options)
+	cmlist, err := lbc.client.CoreV1().ConfigMaps(lbc.nginxServer).List(options)
 
 	if err != nil {
 		return fmt.Errorf("Failed to list cm, err %+v\n", err)
@@ -235,7 +236,7 @@ func (lbc *LoadBalancerController) listCm() error {
 func (lbc *LoadBalancerController) addrAddFunc(obj interface{}) {
 
 	pod := obj.(*v1.Pod)
-	if pod.GetNamespace() == nginxServer && strings.Contains(pod.GetName(), nginxPattern) && pod.Status.PodIP != "" {
+	if pod.GetNamespace() == lbc.nginxServer && strings.Contains(pod.GetName(), nginxPattern) && pod.Status.PodIP != "" {
 
 		key := fmt.Sprintf("adding_%v\n", pod.GetName())
 		ok, addr := ValidateIPv4(pod.Status.PodIP)
@@ -251,7 +252,7 @@ func (lbc *LoadBalancerController) addrUpdateFunc(newobj, oldobj interface{}) {
 	//oldPod := oldobj.(*v1.Pod)
 	newPod := newobj.(*v1.Pod)
 
-	if newPod.GetNamespace() == nginxServer && newPod.Status.PodIP != "" {
+	if newPod.GetNamespace() == lbc.nginxServer && newPod.Status.PodIP != "" {
 		glog.Info("Addressing update func received k8s events ...")
 		cond.L.Lock()
 		for len(lbc.lbstore) == 3 {
@@ -377,6 +378,12 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 		client: cfg.Client,
 	}
 
+	if cfg.nginxServer != "" {
+		lbc.nginxServer = cfg.nginxServer
+	} else {
+		lbc.nginxServer = nginxDefault
+	}
+
 	lbc.lbstore = make(chan *LBStore, 3)
 	lbc.clbdata = NewLBStore()
 	lbc.plbdata = NewLBStore()
@@ -389,7 +396,7 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 	lbc.lvsManager = ipvs.NewLvsManager()
 	lbc.lvsManager.Init(cfg)
 
-	podListWatcher := cache.NewListWatchFromClient(lbc.client.CoreV1().RESTClient(), "pods", nginxServer, fields.Everything())
+	podListWatcher := cache.NewListWatchFromClient(lbc.client.CoreV1().RESTClient(), "pods", lbc.nginxServer, fields.Everything())
 	_, lbc.controller = cache.NewInformer(
 		podListWatcher,
 		&v1.Pod{},
@@ -400,7 +407,7 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 		},
 	)
 
-	cmListWatcher := cache.NewListWatchFromClient(lbc.client.CoreV1().RESTClient(), "configmaps", nginxServer, fields.Everything())
+	cmListWatcher := cache.NewListWatchFromClient(lbc.client.CoreV1().RESTClient(), "configmaps", lbc.nginxServer, fields.Everything())
 	_, lbc.addrController = cache.NewInformer(
 		cmListWatcher,
 		&v1.ConfigMap{},

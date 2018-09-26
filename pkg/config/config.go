@@ -28,7 +28,7 @@ func (c *Config) AddFlags(app *cli.App) {
 			Destination:	&c.SchedName,
 		},
 		cli.StringFlag{
-			Name:			"nginxServer",
+			Name:			"nginxserver",
 			Usage:			"Namespace in which Nginx Controller is deployed",
 			Destination:	&c.nginxServer,
 		},
@@ -48,7 +48,7 @@ func (c *Config) AddFlags(app *cli.App) {
 			Destination:	&c.Pcc,
 		},
 		cli.StringFlag {
-			Name:			"Pnmpp",
+			Name:			"pnmpp",
 			Usage:			"Persistent Netfilter Marked Packet Persistence",
 			Destination:	&c.Pnmpp,
 		},
