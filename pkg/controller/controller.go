@@ -378,8 +378,8 @@ func NewLoadBalancerController(cfg config.Config) *LoadBalancerController {
 		client: cfg.Client,
 	}
 
-	if cfg.nginxServer != "" {
-		lbc.nginxServer = cfg.nginxServer
+	if cfg.NginxServer != "" {
+		lbc.nginxServer = cfg.NginxServer
 	} else {
 		lbc.nginxServer = nginxDefault
 	}

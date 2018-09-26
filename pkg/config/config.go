@@ -8,12 +8,11 @@ import (
 type Config struct {
 	Client			  kubernetes.Interface
 
-	nginxServer		  string
+	NginxServer		  string
 
 	SchedName		  string
 	Vip		          string
-	Pcc				  string
-	Pnmpp			  string
+	Pnmpp			  bool
 	Idle_Timeout	  string
 }
 
@@ -30,7 +29,7 @@ func (c *Config) AddFlags(app *cli.App) {
 		cli.StringFlag{
 			Name:			"nginxserver",
 			Usage:			"Namespace in which Nginx Controller is deployed",
-			Destination:	&c.nginxServer,
+			Destination:	&c.NginxServer,
 		},
 		cli.StringFlag {
 			Name:		    "vip",
@@ -42,14 +41,9 @@ func (c *Config) AddFlags(app *cli.App) {
 			Usage:			"Idle Timeout for tcp tcpfin udp session, e.x: 120-50-50 will set ipvsadm --set tcp tcpfin udp",
 			Destination:	&c.Idle_Timeout,
 		},
-		cli.StringFlag {
-			Name:			"pcc",
-			Usage:			"Persistent client connections",
-			Destination:	&c.Pcc,
-		},
-		cli.StringFlag {
+		cli.BoolFlag {
 			Name:			"pnmpp",
-			Usage:			"Persistent Netfilter Marked Packet Persistence",
+			Usage:			"Persistent Netfilter Marked Packet Persistence, flag: true if set",
 			Destination:	&c.Pnmpp,
 		},
 	}

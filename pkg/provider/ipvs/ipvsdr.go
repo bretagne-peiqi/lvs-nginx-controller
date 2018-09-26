@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"math/rand"
+	"strconv"
+	"strings"
 	"syscall"
 
 	"github.com/lvs-nginx-controller/pkg/config"
@@ -25,6 +28,10 @@ type LvsManager struct {
 	handle      libipvs.IPVSHandle
 	vip         net.IP
 	SchedName   string
+
+	timeout		uint32
+	marked		bool
+	intf        string
 }
 
 func NewLvsManager() *LvsManager {
@@ -45,6 +52,13 @@ func (lm *LvsManager) Init(cfg config.Config) {
 	lm.vip = net.ParseIP(cfg.Vip)
 	lm.SchedName = cfg.SchedName
 
+	iTime, _ := strconv.Atoi(cfg.Idle_Timeout)
+	lm.timeout = uint32(iTime)
+
+	lm.marked  = cfg.Pnmpp
+
+	lm.intf = Intf()
+
 	handle, err := libipvs.New()
 	lm.handle = handle
 	if err != nil {
@@ -53,6 +67,10 @@ func (lm *LvsManager) Init(cfg config.Config) {
 
 	if err := lm.handle.Flush(); err != nil {
 		glog.Error("Failed to flush old ipvs hash table ... exited")
+	}
+
+	if err := initIptables(); err != nil {
+		glog.Error("Failed to flush old iptables mangle table ... exited")
 	}
 
 }
@@ -73,10 +91,9 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 	case TCP:
 		{
 			protocol = libipvs.Protocol(syscall.IPPROTO_TCP)
-		}
-	case FW:
-		{
-			fwmark = Fwmark
+			if lm.marked {
+				fwmark = lm.Fwmark(dport)
+			}
 		}
 	default:
 		return fmt.Errorf("Failed, unsupport protocol type %v, only tcp, udp supported \n", proto), svc, dst
@@ -89,7 +106,7 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 		Port:          dport,
 		SchedName:     lm.SchedName,
 		FWMark:		   fwmark,
-		Timeout:	   persistent,
+		Timeout:	   lm.timeout,
 	}
 
 	dst = libipvs.Destination{
@@ -101,17 +118,37 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 	return nil, svc, dst
 }
 
-// persistent timeout, firewall mark.
-func Fwmark(cfg config.Config) uint32, uint32 {
-	//we assurme that iptables module is installed by default, equally ip_nat_ftp
-	for _, port := range dports {
-		cmd := fmt.Sprintf("iptables -t mangle -A PREROUTING -d %v -i eth0 -p tcp -dport %v -j MARK --set-mark %v", vip, dport, fwmark)
-		output, err := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
-		if err != nil {
-			glog.Errorf("Failed to install iptables rules for firewall persistent netfilter marked connections, err: %v\n", err)
-		}
+func initIptables() error {
+	cmd := fmt.Sprintf("iptables -t mangle -F")
+	_, err := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("Failed to initIptables, err: %v\n", err)
 	}
-	return
+	return nil
+}
+
+// persistent timeout, firewall mark.
+func (lm *LvsManager) Fwmark(dport uint16) uint32 {
+	//we assurme that iptables module is installed by default, equally ip_nat_ftp
+	nfwmark := rand.Intn(100)
+	cmd := fmt.Sprintf("iptables -t mangle -A PREROUTING -d %v -i %v -p tcp -dport %v -j MARK --set-mark %v", lm.vip, lm.intf, string(dport), nfwmark)
+	_, err := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
+	if err != nil {
+		glog.Errorf("Failed to install iptables rules for firewall persistent netfilter marked connections, err: %v\n", err)
+	}
+	return uint32(nfwmark)
+}
+
+func Intf() string {
+
+	cmd := fmt.Sprintf("ip r|grep default|awk {'print $5'}")
+	output, err := exec.Command("/bin/sh", "-c", cmd).CombinedOutput()
+	if err != nil {
+		glog.Errorf("Failed to install iptables rules for firewall persistent netfilter marked connections, err: %v\n", err)
+	}
+	intf := strings.Replace(string(output), "\n", "", -1)
+
+	return intf
 }
 
 func (lm *LvsManager) Add(daddr net.IP, dport uint16, proto string) error {
