@@ -1,5 +1,6 @@
 # IPVS based kubernetes controller
 
+### Why lvs-nginx-controller
 This project is aimed to provide external traffic loadbalancing to kubernetes based container application.
 Especially for heavy traffic loads mode.
 
@@ -32,7 +33,8 @@ Lvs loadbalancer can offer some high-level loadlalancing feature such as persist
 In order to make it works, we need to config nodes running ingress-nginx-controller according scripts in dir install.
 
 to debug and print gc logs, 
-  	build:
-		go build cmd/lvs-controller/main.go
-	run:
-		GODEBUG='gctrace=1' ./lvs-controller --debug --kubeconfig kubeconfig -vip 10.135.22.77 --schedname rr 2>&1>gc.log &
+* build:	go build cmd/lvs-controller/main.go
+* run:  	GODEBUG='gctrace=1' ./lvs-controller --debug --kubeconfig kubeconfig -vip 10.135.22.77 --schedname rr 2>&1>gc.log &
+
+## State
+	in developping, any contribution will be welcomed. 
