@@ -18,12 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-
-	v1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
-	clientset "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned"
-	lvsscheme "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/scheme"
-	informers "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/informers/externalversions/lvscontroller/v1alpha1"
-	listers "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/listers/lvscontroller/v1alpha1"
 )
 
 const (
