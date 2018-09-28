@@ -47,3 +47,11 @@ type UDPService struct {
 	Port		uint32	 `json:"port"`
 	Protocol	string		 `json:"protocol"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type ConfigurationList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Configuration `json:"items"`
+}
