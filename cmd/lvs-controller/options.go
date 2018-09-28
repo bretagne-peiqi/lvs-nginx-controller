@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/lvs-nginx-controller/pkg/config"
+	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/config"
 	"gopkg.in/urfave/cli.v1"
 )
 

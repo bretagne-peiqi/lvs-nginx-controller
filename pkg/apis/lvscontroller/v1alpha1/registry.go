@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	lvscontroller "github.com/lvs-nginx-controller/pkg/apis/lvscontroller"
+	lvscontroller "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/apis/lvscontroller"
 )
 
 // SchemeGroupVersion is group version used to register these objects

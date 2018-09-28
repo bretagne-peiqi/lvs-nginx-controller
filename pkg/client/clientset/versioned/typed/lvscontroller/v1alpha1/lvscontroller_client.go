@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
-	"github.com/lvs-nginx-controller/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
+	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
 )

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lvs-nginx-controller/pkg/config"
-	"github.com/lvs-nginx-controller/pkg/provider/ipvs"
+	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/config"
+	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/provider/ipvs"
 
 	glog "github.com/zoumo/logdog"
 	"k8s.io/api/core/v1"
@@ -19,11 +19,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 
-	v1alpha1 "github.com/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
-	clientset "github.com/lvs-nginx-controller/pkg/client/clientset/versioned"
-	lvsscheme "github.com/lvs-nginx-controller/pkg/client/clientset/versioned/scheme"
-	informers "github.com/lvs-nginx-controller/pkg/client/informers/externalversions/lvscontroller/v1alpha1"
-	listers "github.com/lvs-nginx-controller/pkg/client/listers/lvscontroller/v1alpha1"
+	v1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
+	clientset "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned"
+	lvsscheme "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/scheme"
+	informers "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/informers/externalversions/lvscontroller/v1alpha1"
+	listers "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/listers/lvscontroller/v1alpha1"
 )
 
 const (

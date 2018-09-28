@@ -3,8 +3,8 @@
 package lvscontroller
 
 import (
-	internalinterfaces "github.com/lvs-nginx-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/lvs-nginx-controller/pkg/client/informers/externalversions/lvscontroller/v1alpha1"
+	internalinterfaces "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/informers/externalversions/lvscontroller/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

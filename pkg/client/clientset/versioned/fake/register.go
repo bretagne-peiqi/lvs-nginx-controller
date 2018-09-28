@@ -3,7 +3,7 @@
 package fake
 
 import (
-	lvscontrollerv1alpha1 "github.com/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
+	lvscontrollerv1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -3,7 +3,7 @@
 package fake
 
 import (
-	v1alpha1 "github.com/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1"
+	v1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

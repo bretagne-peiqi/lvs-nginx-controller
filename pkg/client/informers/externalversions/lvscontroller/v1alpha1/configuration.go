@@ -5,10 +5,10 @@ package v1alpha1
 import (
 	time "time"
 
-	lvscontrollerv1alpha1 "github.com/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
-	versioned "github.com/lvs-nginx-controller/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/lvs-nginx-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/lvs-nginx-controller/pkg/client/listers/lvscontroller/v1alpha1"
+	lvscontrollerv1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
+	versioned "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/listers/lvscontroller/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

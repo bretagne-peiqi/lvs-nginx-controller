@@ -3,7 +3,7 @@
 package versioned
 
 import (
-	lvscontrollerv1alpha1 "github.com/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1"
+	lvscontrollerv1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

@@ -3,9 +3,9 @@
 package fake
 
 import (
-	clientset "github.com/lvs-nginx-controller/pkg/client/clientset/versioned"
-	lvscontrollerv1alpha1 "github.com/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1"
-	fakelvscontrollerv1alpha1 "github.com/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1/fake"
+	clientset "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned"
+	lvscontrollerv1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1"
+	fakelvscontrollerv1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/typed/lvscontroller/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

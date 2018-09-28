@@ -9,7 +9,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/lvs-nginx-controller/pkg/config"
+	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/config"
 
 	"github.com/pshi/libipvs"
 	glog "github.com/zoumo/logdog"
