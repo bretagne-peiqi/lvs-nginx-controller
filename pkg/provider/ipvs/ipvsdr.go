@@ -11,7 +11,7 @@ import (
 
 	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/config"
 
-	"github.com/pshi/libipvs"
+	"github.com/mqliang/libipvs"
 	glog "github.com/zoumo/logdog"
 )
 
