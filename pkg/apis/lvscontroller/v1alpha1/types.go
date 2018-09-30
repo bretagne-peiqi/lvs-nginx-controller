@@ -12,40 +12,39 @@ type Configuration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	TCPEndpoints	 []TCPService	`json:"tCPEndpoints"`
-	UDPEndpoints	 []UDPService	`json:"uDPEndpoints"`
+	TCPEndpoints []TCPService `json:"tCPEndpoints"`
+	UDPEndpoints []UDPService `json:"uDPEndpoints"`
 }
 
 type TCPService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Name		string		`json: "name"`
-	Namespace   string     `json: "namespace"`
+	Name      string `json: "name"`
+	Namespace string `json: "namespace"`
 
-	Port		string       `json:"port"`
-	Protocol    string		 `json:"protocol"`
-	PersistConns     uint32  `json:"persistConns"`
-	FWMark           uint32  `json:"fWMark"`
-	Iptables	[]IptablesMangle	`json: "iptables"`
+	Port         string           `json:"port"`
+	Protocol     string           `json:"protocol"`
+	PersistConns uint32           `json:"persistConns"`
+	FWMark       uint32           `json:"fWMark"`
+	Iptables     []IptablesMangle `json: "iptables"`
 }
 
-type  IptablesMangle struct {
+type IptablesMangle struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Port	[]uint32	`json: "port"`
-
+	Port []uint32 `json: "port"`
 }
 
 type UDPService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Name		string		`json: "name"`
-	Namespace   string     `json: "namespace"`
-	Port		uint32	 `json:"port"`
-	Protocol	string		 `json:"protocol"`
+	Name      string `json: "name"`
+	Namespace string `json: "namespace"`
+	Port      uint32 `json:"port"`
+	Protocol  string `json:"protocol"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

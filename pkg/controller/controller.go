@@ -7,21 +7,26 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/config"
-	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/provider/ipvs"
-
 	glog "github.com/zoumo/logdog"
 	"k8s.io/api/core/v1"
-	v2 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
+
+	lvscontrollerv1alpha1 "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/apis/lvscontroller/v1alpha1"
+	clientset "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned"
+	lvscontrollerscheme "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/clientset/versioned/scheme"
+	informers "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/informers/externalversions/lvscontroller/v1alpha1"
+	listers "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/client/listers/lvscontroller/v1alpha1"
+	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/config"
+	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/provider/ipvs"
 )
 
 const (
-	nginxDefault  = "ingress-nginx"
+	nginxDefault = "ingress-nginx"
 	nginxPattern = "nginx-ingress-controller"
 
 	tcpService = "tcp-services"
@@ -166,7 +171,7 @@ func (lbc *LoadBalancerController) updatePorts(oldobj, newobj interface{}) {
 
 func (lbc *LoadBalancerController) listNginx(LB *LBStore) error {
 
-	var options v2.ListOptions
+	var options metav1.ListOptions
 	podlist, err := lbc.client.CoreV1().Pods(lbc.nginxServer).List(options)
 
 	if err != nil {
@@ -192,7 +197,7 @@ func (lbc *LoadBalancerController) listNginx(LB *LBStore) error {
 }
 
 func (lbc *LoadBalancerController) listCm() error {
-	var options v2.ListOptions
+	var options metav1.ListOptions
 	cmlist, err := lbc.client.CoreV1().ConfigMaps(lbc.nginxServer).List(options)
 
 	if err != nil {

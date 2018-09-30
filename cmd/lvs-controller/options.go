@@ -7,8 +7,8 @@ import (
 
 type Options struct {
 	Kubeconfig string
-	Debug	   bool
-	Cfg	       config.Config
+	Debug      bool
+	Cfg        config.Config
 }
 
 // NewOptions reutrns a new Options
@@ -30,10 +30,9 @@ func (opts *Options) AddFlags(app *cli.App) {
 		cli.BoolFlag{
 			Name:        "debug",
 			Usage:       "Run with debug mode",
-			Destination:  &opts.Debug,
+			Destination: &opts.Debug,
 		},
 	}
 
 	app.Flags = append(app.Flags, flags...)
 }
-

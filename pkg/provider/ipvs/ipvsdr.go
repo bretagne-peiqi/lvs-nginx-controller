@@ -2,9 +2,9 @@ package ipvs
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"os/exec"
-	"math/rand"
 	"strconv"
 	"strings"
 	"syscall"
@@ -29,9 +29,9 @@ type LvsManager struct {
 	vip         net.IP
 	SchedName   string
 
-	timeout		uint32
-	marked		bool
-	intf        string
+	timeout uint32
+	marked  bool
+	intf    string
 }
 
 func NewLvsManager() *LvsManager {
@@ -55,7 +55,7 @@ func (lm *LvsManager) Init(cfg config.Config) {
 	iTime, _ := strconv.Atoi(cfg.Idle_Timeout)
 	lm.timeout = uint32(iTime)
 
-	lm.marked  = cfg.Pnmpp
+	lm.marked = cfg.Pnmpp
 
 	lm.intf = Intf()
 
@@ -105,8 +105,8 @@ func (lm *LvsManager) Base(daddr net.IP, dport uint16, proto string) (error, lib
 		Protocol:      protocol,
 		Port:          dport,
 		SchedName:     lm.SchedName,
-		FWMark:		   fwmark,
-		Timeout:	   lm.timeout,
+		FWMark:        fwmark,
+		Timeout:       lm.timeout,
 	}
 
 	dst = libipvs.Destination{

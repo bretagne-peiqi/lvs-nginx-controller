@@ -14,8 +14,8 @@ import (
 	glog "github.com/zoumo/logdog"
 	"gopkg.in/urfave/cli.v1"
 
-	_ "net/http/pprof"
 	"net/http"
+	_ "net/http/pprof"
 	//pprof "runtime/pprof"
 
 	"k8s.io/apimachinery/pkg/util/wait"
