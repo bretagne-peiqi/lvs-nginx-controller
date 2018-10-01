@@ -48,7 +48,7 @@ echo "+++++ Start building lvs-nginx-controller"
 cd ${ROOT}
 
 # Build lvs-nginx-controller binary.
-docker run --rm -v `pwd`:/var/root/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller docker-registry.telecom.com/base/golang:1.10 sh -c "cd /var/root/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller  && go build -race ."
+docker run --rm -v `pwd`:/usr/local/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller docker-registry.telecom.com/base/golang:1.10 sh -c "cd /var/root/go/src/github.com/lvs-nginx-controller/cmd/lvs-controller  && go build -race ."
 # Build lvs-nginx-controller container.
 docker build -t telecom/lvs-controller:${IMAGE_TAG} .
 docker tag telecom/lvs-controller:${IMAGE_TAG} docker-registry.telecom.com/kubernetes-lb/lvs-controller:${IMAGE_TAG}

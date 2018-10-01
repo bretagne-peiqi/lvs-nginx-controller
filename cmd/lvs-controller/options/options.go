@@ -1,4 +1,4 @@
-package main
+package options
 
 import (
 	"github.com/bretagne-peiqi/lvs-nginx-controller/pkg/config"

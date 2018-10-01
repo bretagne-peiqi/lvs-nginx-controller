@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/bretagne-peiqi/lvs-nginx-controller/cmd/lvs-controller/options"
 	ipvs "github.com/bretagne-peiqi/lvs-nginx-controller/pkg/controller"
 
 	glog "github.com/zoumo/logdog"
@@ -23,7 +24,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func RunController(opts *Options, stopCh <-chan struct{}) error {
+func RunController(opts *options.Options, stopCh <-chan struct{}) error {
 
 	glog.Infof("The ipvs controller started ...")
 
@@ -67,7 +68,7 @@ func main() {
 	app.Usage = "sync k8s ingress-controller resources for ip_vs loadbalancer\n    This controller is intented to used at L4 level, but we need to config ports 80&443 definitivily\n    when combining used with nginx-ingress-controller"
 	app.Version = "beta 1.0"
 
-	opts := NewOptions()
+	opts := options.NewOptions()
 	opts.AddFlags(app)
 
 	go func() {
