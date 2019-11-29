@@ -37,7 +37,7 @@ to debug and print gc logs,
 * run:  	GODEBUG='gctrace=1' ./lvs-controller --debug --kubeconfig kubeconfig -vip 10.135.22.77 --schedname rr 2>&1>gc.log &
 
 ### Typical use cases
-We could use config vip in a pair of lvs and register it in a public dns, This virtual ipv4 should be the same as cluster ipv4 in ingress when using DR mode.
+We could config vip in a pair of lvs and register it in a public dns, This virtual ipv4 should be the same as cluster ipv4 in ingress when using DR mode.
 
 When workloads pass nginx-controller, it will direct to backend endpoints
 
