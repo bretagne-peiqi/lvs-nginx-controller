@@ -39,7 +39,7 @@ const (
 	protoUdp = "udp"
 )
 
-var locker = new(sync.Mutex)
+var locker sync.Mutex
 var cond = sync.NewCond(locker)
 
 type LoadBalancerController struct {
